@@ -52,7 +52,7 @@ proc_mapstacks(pagetable_t kpgtbl) {}
 void
 procinit(void) {
     initlock(&pid_lock, "nextpid");
-    initlock(&proclist.lock, "wait_lock");
+    initlock(&wait_lock, "wait_lock");
 
     proclist.state = UNUSED; //was in proc_mapstacks
     proclist.next = &proclist; //we need it for loop correct work
@@ -402,7 +402,8 @@ exit(int status) {
     end_op();
     p->cwd = 0;
 
-    acquire(&wait_lock);
+    //acquire(&wait_lock);
+    acquire(&proclist.lock);
 
     // Give any children to init.
     reparent(p);
@@ -410,12 +411,12 @@ exit(int status) {
     // Parent might be sleeping in wait().
     wakeup(p->parent);
     
-    acquire(&proclist.lock);
+
 
     p->xstate = status;
     p->state = ZOMBIE;
 
-    release(&wait_lock);
+    //release(&wait_lock);
     
     // Jump into the scheduler, never to return.
     sched();
@@ -602,11 +603,11 @@ void
 wakeup(void *chan) {
     for (struct proc *p = proclist.next; p != &proclist; p = p->next) {
         if (p != myproc()) {
-            acquire(&proclist.lock);
+            //acquire(&proclist.lock);
             if (p->state == SLEEPING && p->chan == chan) {
                 p->state = RUNNABLE;
             }
-            release(&proclist.lock);
+            //release(&proclist.lock);
         }
 
     }
