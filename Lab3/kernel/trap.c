@@ -29,7 +29,8 @@ trapinithart(void)
   w_stvec((uint64)kernelvec);
 }
 
-int cow_fault_handler(pagetable_t pagetable, uint64 va) {
+
+int cow_handler(pagetable_t pagetable, uint64 va) {
 
   const int OK = 0, ERR = -1, NOT_COW = 1;
 
@@ -37,6 +38,7 @@ int cow_fault_handler(pagetable_t pagetable, uint64 va) {
   if(va >= MAXVA) return ERR;
 
   pte_t *pte = walk(pagetable, va, 0);
+  
   //check that all is not equal to 0
   if ((pte && (*pte & PTE_V) && (*pte & PTE_U)) == 0) return ERR;
   
@@ -82,22 +84,68 @@ usertrap(void)
 
     syscall();
   }
-  else if (r_scause() == 13 || r_scause() == 15) {
-    uint64 va = r_stval();
-
-    if (va >= p->sz || cow_fault_handler(p->pagetable, va) != 0)
-      p->killed = 1;
-  }
   else if((which_dev = devintr()) != 0){
     // ok
-  } else {
+  }
+  else if (r_scause() == 13 || r_scause() == 15) {
+
+    uint64 va = r_stval();
+
+
+    if (p->sz <= va) { 
+      //printf("usertrap: va is bigger than process size\n");
+      p->killed = 1;
+      goto killcheck;
+    }
+
+
+    
+    va = PGROUNDDOWN(va);
+
+    pte_t* pte = walk(p->pagetable, va, 0);
+    
+
+    if ((pte && (*pte & PTE_V)) == 0) {
+    
+    	//try lazy allocation
+    	
+    	void* mem = kalloc();
+    	if(!mem) p->killed = 1;
+    	else{
+    		memset(mem, 0, PGSIZE);
+ 		int flags = PTE_W | PTE_R | PTE_U;
+ 		if(mappages(p->pagetable, va, PGSIZE, (uint64)mem, flags) != 0){
+ 			kfree(mem);
+ 			p->killed = 1;
+ 		}
+    	}
+    } 
+    
+    else {
+
+      //if found and copy-on-write page
+      
+      if (*pte & PTE_RSW) {
+      
+       //cow didn't return 0 --> fail	
+        if (cow_handler(p->pagetable, va)) {
+          printf("usertrap: cow copy failed\n");
+          p->killed = 1;
+        }
+      }
+    }
+    
+    //ok
+  }
+  else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
     p->killed = 1;
   }
 
-  if(p->killed)
-    exit(-1);
+killcheck: if(p->killed) {
+ 	exit(-1);
+ }
 
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2)
@@ -241,4 +289,3 @@ devintr()
     return 0;
   }
 }
-
