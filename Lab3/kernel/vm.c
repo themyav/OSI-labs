@@ -5,6 +5,8 @@
 #include "riscv.h"
 #include "defs.h"
 #include "fs.h"
+#include "spinlock.h"
+#include "proc.h"
 
 /*
  * the kernel's page table.
@@ -178,9 +180,9 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
 
   for(a = va; a < va + npages*PGSIZE; a += PGSIZE){
     if((pte = walk(pagetable, a, 0)) == 0)
-      panic("uvmunmap: walk");
+      continue;//panic("uvmunmap: walk");
     if((*pte & PTE_V) == 0)
-      panic("uvmunmap: not mapped");
+      continue; //panic("uvmunmap: not mapped");
     if(PTE_FLAGS(*pte) == PTE_V)
       panic("uvmunmap: not a leaf");
     if(do_free){
@@ -298,10 +300,12 @@ uvmfree(pagetable_t pagetable, uint64 sz)
 
 
 void levelprint(pagetable_t pagetable, int level) {
-  for (int i = 0; i < 512; ++i) { //TODO why 512?
+  const int SZ = 512;
+  
+  for (int i = 0; i < SZ; i++) {
     pte_t pte = pagetable[i];
     if (pte & PTE_V) {
-      for (int j = 0; j <= level; ++j) {
+      for (int j = 0; j <= level; j++) {
         printf(" ..");
       }
       uint64 pa = PTE2PA(pte);
@@ -336,10 +340,10 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
   for(i = 0; i < sz; i += PGSIZE){
 
     if((pte = walk(old, i, 0)) == 0)
-      panic("uvmcopy: pte should exist");
+     continue; // panic("uvmcopy: pte should exist");
 
     if((*pte & PTE_V) == 0)
-      panic("uvmcopy: page not present");
+      continue; //panic("uvmcopy: page not present");
 
     pa = PTE2PA(*pte);
 
@@ -366,18 +370,6 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
 }
 
 
-//FOR TASK 1
-/*
-usertrap(): unexpected scause 0x000000000000000f pid=3
-            sepc=0x00000000000009ee stval=0x0000000000004f98
-usertrap(): unexpected scause 0x0000000000000002 pid=2
-            sepc=0x0000000000000004 stval=0x0000000000000000
-scause 0x000000000000000f
-sepc=0x00000000800061b6 stval=0x0000000000000000
-panic: kerneltrap
-
-*/
-
 // mark a PTE invalid for user access.
 // used by exec for the user stack guard page.
 void
@@ -403,19 +395,31 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 
   while(len > 0){
     va0 = PGROUNDDOWN(dstva);
-    if (cow_fault_handler(pagetable, va0) < 0) {
+    pa0 = walkaddr(pagetable, va0);
+    
+    if(!pa0 && (((va0 < MAXVA) && (va0 < myproc()->sz)) == 0)) return -1;
 
-      // error
-      return -1;
+    pte_t *pte = walk(pagetable, va0, 0);
+
+    if ((va0 < myproc()->sz) && (*pte & PTE_V) && (*pte & PTE_U) && (*pte & PTE_RSW) && !(PTE_W & *pte)) {
+    
+        void* mem = kalloc();
+        
+        if (mem == 0) {
+            printf("copyout: failed to allocate copy-on-write page\n");
+        }
+        else {
+            memmove(mem, (char*)pa0, PGSIZE);
+            uint flags = ((PTE_FLAGS(*pte) & ~PTE_RSW) | PTE_W);
+            uvmunmap(pagetable, va0, 1, 1);
+           *pte = PA2PTE(mem) | flags;
+            pa0 = (uint64)mem;
+        }
     }
 
-    pa0 = walkaddr(pagetable, va0);
-    if(pa0 == 0)
-      return -1;
     n = PGSIZE - (dstva - va0);
-    if(n > len)
-      n = len;
-    memmove((void *)(pa0 + (dstva - va0)), src, n);
+    if(n > len) n = len;
+    if (pa0 != 0) memmove((void *)(pa0 + (dstva - va0)), src, n);
 
     len -= n;
     src += n;
@@ -435,12 +439,11 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
   while(len > 0){
     va0 = PGROUNDDOWN(srcva);
     pa0 = walkaddr(pagetable, va0);
-    if(pa0 == 0)
-      return -1;
+    if(!pa0 && (((va0 < MAXVA) && (va0 < myproc()->sz)) == 0)) return -1; //srcva?
     n = PGSIZE - (srcva - va0);
     if(n > len)
       n = len;
-    memmove(dst, (void *)(pa0 + (srcva - va0)), n);
+    if(pa0 != 0) memmove(dst, (void *)(pa0 + (srcva - va0)), n);
 
     len -= n;
     dst += n;
