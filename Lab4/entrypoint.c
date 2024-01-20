@@ -7,7 +7,7 @@
 #include "tcp_client.h"
 #include "entrypoint.h"
 
-#define ROOT_INODE 2755680
+#define ROOT_INODE 2756147
 
 
 MODULE_LICENSE("GPL");
@@ -41,15 +41,9 @@ int networkfs_unlink(struct inode *parent_inode, struct dentry *child_dentry) {
     name = child_dentry->d_name.name;
     root = parent_inode->i_ino;
 
-    /*int64_t res = networkfs_http_call(
-        (char *)(parent_inode->i_sb->s_root->d_fsdata), "unlink", NULL, 0, 2,
-        "parent", root_s, "name", get_adv_name(name));
+    int64_t res = unlink_call(root, name);
 
-    if (res) {
-      return res;
-    }*/
-
-    return 0;
+    return res;
 }
 
 

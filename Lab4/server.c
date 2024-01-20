@@ -269,6 +269,24 @@ void create_request(int new_socket, ino_t parent_inode, char *name, int type) {
 
 }
 
+void unlink_request(int new_socket, ino_t parent_inode, char *name){
+    const char *start_dir = ".";
+    char parent_name[PATH_MAX] = {'\0'};
+    find_dir(parent_inode, start_dir, parent_name);
+    if (strlen(parent_name) == 0) {
+        printf("not found parent dir\n");
+        send(new_socket, err_resp);
+        return;
+    }
+
+    char path[PATH_MAX + 2];
+    snprintf(path, sizeof(path), "%s/%s", parent_name, name);
+
+    int status = unlink(path);
+    if (status != 0) send(new_socket, err_resp);
+    else send(new_socket, "response:{code:0}");
+}
+
 void parse_request(const char *request, int new_socket) {
     char *str;
     char *token;
@@ -303,11 +321,16 @@ void parse_request(const char *request, int new_socket) {
                   */
 
                 /*
+                  request:{method:"unlink",parent_inode:12345,name:"myfile.txt"}
+                  */
+
+                /*
                 request:{method:"create",parent_inode:12345,name:"mynewfile.txt",type:8}
                 */
 
             else if (strcmp(token, "\"lookup\"") == 0 ||
-                     strcmp(token, "\"create\"") == 0) {
+                     strcmp(token, "\"create\"") == 0 ||
+                     strcmp(token, "\"unlink\"") == 0){
                 char op_name[MAX_OP_LEN];
                 strcpy(op_name, token);
 
@@ -328,7 +351,12 @@ void parse_request(const char *request, int new_socket) {
                 if (strcmp(op_name, "\"lookup\"") == 0) {
                     lookup_request(new_socket, parent_ino, file_name);
                     free(file_name);
-                } else {
+                }
+                else if (strcmp(op_name, "\"unlink\"") == 0){
+                    unlink_request(new_socket, parent_ino, file_name);
+                    free(file_name);
+                }
+                else {
                     token = strsep(&str, sep); //token = "type"
                     token = strsep(&str, sep); //token = type val
                     int type = strtoul(token, NULL, 10);
@@ -396,6 +424,6 @@ void start() {
 
 int main(int argc, char const *argv[]) {
     start();
-    //parse_request("request:{method:\"create\",parent_inode:2665326,name:\"mynewdir1\",type:4}", 0);
+    //parse_request("request:{method:\"unlink\",parent_inode:2756147,name:\"g1\"}", 0);
     return 0;
 }

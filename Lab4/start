@@ -1,0 +1,5 @@
+#!/bin/bash
+sudo make
+sudo insmod networkfs.ko
+sudo mount -t networkfs c6962993-5377-4baf-ba40-c636c72c4b1d /mnt/ct
+
