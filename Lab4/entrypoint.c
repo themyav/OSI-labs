@@ -33,7 +33,44 @@ struct inode_operations networkfs_inode_ops =
                 .lookup = networkfs_lookup,
                 .create = networkfs_create,
                 .unlink = networkfs_unlink,
+                .mkdir = networkfs_mkdir,
+                .rmdir = networkfs_rmdir
         };
+
+int networkfs_rmdir(struct inode *parent_inode, struct dentry *child_dentry) {
+    const char *name;
+    ino_t root;
+
+    name = child_dentry->d_name.name;
+    root = parent_inode->i_ino;
+
+    int64_t res = rmdir_call(root, name);
+
+    return res;
+}
+
+int networkfs_mkdir(struct user_namespace *ns, struct inode *parent_inode,
+                    struct dentry *child_dentry, umode_t t) {
+    ino_t new_inode;
+    const char *name;
+    struct inode *inode;
+    ino_t root;
+
+    name = child_dentry->d_name.name;
+    root = parent_inode->i_ino;
+
+    int64_t res = create_call(root, name, 4, &new_inode);
+
+    if (res) {
+        return res;
+    }
+
+    inode = networkfs_get_inode(parent_inode->i_sb, NULL, S_IFDIR, new_inode);
+
+    d_add(child_dentry, inode);
+    return 0;
+}
+
 
 int networkfs_unlink(struct inode *parent_inode, struct dentry *child_dentry) {
     const char *name;

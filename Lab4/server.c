@@ -15,6 +15,7 @@
 #define MAX_OP_LEN 64
 
 const char *err_resp = "response:{code:1}";
+const char *ok_resp = "response:{code:0}";
 
 struct entry {
     unsigned char entry_type;
@@ -284,7 +285,25 @@ void unlink_request(int new_socket, ino_t parent_inode, char *name){
 
     int status = unlink(path);
     if (status != 0) send(new_socket, err_resp);
-    else send(new_socket, "response:{code:0}");
+    else send(new_socket, ok_resp);
+}
+
+void rmdir_request(int new_socket, ino_t parent_inode, char *name){
+    const char *start_dir = ".";
+    char parent_name[PATH_MAX] = {'\0'};
+    find_dir(parent_inode, start_dir, parent_name);
+    if (strlen(parent_name) == 0) {
+        printf("not found parent dir\n");
+        send(new_socket, err_resp);
+        return;
+    }
+
+    char path[PATH_MAX + 2];
+    snprintf(path, sizeof(path), "%s/%s", parent_name, name);
+
+    int status = rmdir(path);
+    if (status != 0) send(new_socket, err_resp);
+    else send(new_socket, ok_resp);
 }
 
 void parse_request(const char *request, int new_socket) {
@@ -325,12 +344,17 @@ void parse_request(const char *request, int new_socket) {
                   */
 
                 /*
+                  request:{method:"rmdir",parent_inode:12345,name:"mydir"}
+                  */
+
+                /*
                 request:{method:"create",parent_inode:12345,name:"mynewfile.txt",type:8}
                 */
 
             else if (strcmp(token, "\"lookup\"") == 0 ||
                      strcmp(token, "\"create\"") == 0 ||
-                     strcmp(token, "\"unlink\"") == 0){
+                     strcmp(token, "\"unlink\"") == 0 ||
+                     strcmp(token, "\"rmdir\"") == 0){
                 char op_name[MAX_OP_LEN];
                 strcpy(op_name, token);
 
@@ -354,6 +378,10 @@ void parse_request(const char *request, int new_socket) {
                 }
                 else if (strcmp(op_name, "\"unlink\"") == 0){
                     unlink_request(new_socket, parent_ino, file_name);
+                    free(file_name);
+                }
+                else if (strcmp(op_name, "\"rmdir\"") == 0){
+                    rmdir_request(new_socket, parent_ino, file_name);
                     free(file_name);
                 }
                 else {
@@ -424,6 +452,6 @@ void start() {
 
 int main(int argc, char const *argv[]) {
     start();
-    //parse_request("request:{method:\"unlink\",parent_inode:2756147,name:\"g1\"}", 0);
+    //parse_request("request:{method:\"create\",parent_inode:2756147,name:\"dir1\",type:4}", 0);
     return 0;
 }

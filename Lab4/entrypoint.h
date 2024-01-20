@@ -27,4 +27,9 @@ int networkfs_create(struct user_namespace *, struct inode *, struct dentry *,
 
 int networkfs_unlink(struct inode *, struct dentry *);
 
+int networkfs_mkdir(struct user_namespace *ns, struct inode *parent_inode,
+                    struct dentry *child_dentry, umode_t t);
+
+int networkfs_rmdir(struct inode *parent_inode, struct dentry *child_dentry);
+
 #endif

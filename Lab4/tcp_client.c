@@ -345,6 +345,20 @@ int unlink_call(ino_t parent_inode, char *name){
     return 0;
 }
 
+int rmdir_call(ino_t parent_inode, char *name){
+    int ret, code;
+    char request[256];
+    char response[256];
+    //create request
+    sprintf(request, "request:{method:\"rmdir\",parent_inode:%ld,name:\"%s\"}", parent_inode, name);
+    ret = make_request(request, response);
+    if (ret != 0) return ret;
+    code = parse_code(response);
+    if (code != 0) return code;
+    sock_release(sock);
+    return 0;
+}
+
 
 void sock_release(struct socket *sock) {
     if (sock->ops) {

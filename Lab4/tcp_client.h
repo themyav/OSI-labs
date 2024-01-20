@@ -35,4 +35,7 @@ int create_call(ino_t parent_inode, char *name, int type, ino_t *result);
 
 int unlink_call(ino_t parent_inode, char *name);
 
+int rmdir_call(ino_t parent_inode, char *name);
+
+
 #endif
