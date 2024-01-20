@@ -38,13 +38,7 @@ struct inode_operations networkfs_inode_ops =
         };
 
 int networkfs_rmdir(struct inode *parent_inode, struct dentry *child_dentry) {
-    const char *name;
-    ino_t root;
-
-    name = child_dentry->d_name.name;
-    root = parent_inode->i_ino;
-
-    int64_t res = rmdir_call(root, name);
+    int res = rmdir_call(parent_inode->i_ino, child_dentry->d_name.name);
 
     return res;
 }
@@ -52,14 +46,8 @@ int networkfs_rmdir(struct inode *parent_inode, struct dentry *child_dentry) {
 int networkfs_mkdir(struct user_namespace *ns, struct inode *parent_inode,
                     struct dentry *child_dentry, umode_t t) {
     ino_t new_inode;
-    const char *name;
-    struct inode *inode;
-    ino_t root;
-
-    name = child_dentry->d_name.name;
-    root = parent_inode->i_ino;
-
-    int64_t res = create_call(root, name, 4, &new_inode);
+    struct inode * inode;
+    int res = create_call(parent_inode->i_ino, child_dentry->d_name.name, 4, &new_inode);
 
     if (res) {
         return res;
