@@ -119,7 +119,7 @@ int networkfs_iterate(struct file *filp, struct dir_context *ctx) {
     entries.entries[cnt].ino=ino;
     sprintf(entries.entries[cnt].name,".");*/
 
-    while(i < entries.entries_count){
+    while (i < entries.entries_count) {
         struct entry en = entries.entries[i];
         printk("type:%d,ino:%ld,name:%s\n", en.entry_type, en.ino, en.name);
         i++;
@@ -153,7 +153,6 @@ int networkfs_iterate(struct file *filp, struct dir_context *ctx) {
 }
 
 
-
 struct dentry *networkfs_lookup(struct inode *parent_inode,
                                 struct dentry *child_dentry,
                                 unsigned int flag) {
@@ -182,42 +181,38 @@ struct dentry *networkfs_lookup(struct inode *parent_inode,
 }
 
 
-
-
 //task 3
-void networkfs_kill_sb(struct super_block *sb)
-{
+void networkfs_kill_sb(struct super_block *sb) {
     kfree(sb->s_root->d_fsdata);
-    printk(KERN_INFO "networkfs super block is destroyed. Unmount successfully.\n");
+    printk(KERN_INFO
+    "networkfs super block is destroyed. Unmount successfully.\n");
 }
 
 
-int networkfs_fill_super(struct super_block *sb, void *data, int silent)
-{
+int networkfs_fill_super(struct super_block *sb, void *data, int silent) {
     struct inode *inode;
     inode = networkfs_get_inode(sb, NULL, S_IFDIR, ROOT_INODE);
     sb->s_root = d_make_root(inode);
-    if (sb->s_root == NULL)
-    {
+    if (sb->s_root == NULL) {
         return -ENOMEM;
     }
-    printk(KERN_INFO "return 0\n");
+    printk(KERN_INFO
+    "return 0\n");
     return 0;
 }
 
-struct dentry* mount_nodev(struct file_system_type *fs_type, int flags, void *data, int (*fill_super)(struct super_block *, void *, int));
+struct dentry *mount_nodev(struct file_system_type *fs_type, int flags, void *data,
+                           int (*fill_super)(struct super_block *, void *, int));
 
-struct dentry* networkfs_mount(struct file_system_type *fs_type, int flags, const char *tkn, void *data)
-{
+struct dentry *networkfs_mount(struct file_system_type *fs_type, int flags, const char *tkn, void *data) {
     struct dentry *ret;
     ret = mount_nodev(fs_type, flags, data, networkfs_fill_super);
-    if (ret == NULL)
-    {
-        printk(KERN_ERR "Can't mount file system");
-    }
-    else
-    {
-        printk(KERN_INFO "Mounted successfuly");
+    if (ret == NULL) {
+        printk(KERN_ERR
+        "Can't mount file system");
+    } else {
+        printk(KERN_INFO
+        "Mounted successfuly");
     }
 
 
@@ -227,13 +222,15 @@ struct dentry* networkfs_mount(struct file_system_type *fs_type, int flags, cons
 
 int networkfs_init(void) {
     register_filesystem(&networkfs_fs_type);
-    printk(KERN_INFO "Hello, World!\n");
+    printk(KERN_INFO
+    "Hello, World!\n");
     return 0;
 }
 
 void networkfs_exit(void) {
     unregister_filesystem(&networkfs_fs_type);
-    printk(KERN_INFO "Goodbye!\n");
+    printk(KERN_INFO
+    "Goodbye!\n");
 }
 
 module_init(networkfs_init);

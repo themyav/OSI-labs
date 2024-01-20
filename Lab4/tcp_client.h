@@ -27,8 +27,10 @@ struct entry_info {
     ino_t ino;
 };
 
-int list_call(ino_t inode, struct entries* result);
-int lookup_call(ino_t parent_inode, char* name, struct entry_info* result);
-int create_call(ino_t parent_inode, char* name, int type, ino_t* result);
+int list_call(ino_t inode, struct entries *result);
+
+int lookup_call(ino_t parent_inode, char *name, struct entry_info *result);
+
+int create_call(ino_t parent_inode, char *name, int type, ino_t *result);
 
 #endif

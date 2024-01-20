@@ -14,7 +14,7 @@
 #define MAX_ENTRIES 16
 #define MAX_OP_LEN 64
 
-const char* err_resp = "response:{code:1}";
+const char *err_resp = "response:{code:1}";
 
 struct entry {
     unsigned char entry_type;
@@ -37,28 +37,28 @@ struct entry_info {
 recursively finds the directory with inode=inode
 */
 
-void find_dir(ino_t inode, const char * cur_name, char* res) {
+void find_dir(ino_t inode, const char *cur_name, char *res) {
 
-    DIR * dir = opendir(cur_name);
+    DIR *dir = opendir(cur_name);
     if (dir == NULL) {
         perror("opendir");
         return;
     }
 
-    struct dirent * entry;
+    struct dirent *entry;
     while ((entry = readdir(dir)) != NULL) {
 
         struct stat file_stat;
         char path[PATH_MAX];
-        snprintf(path, PATH_MAX, "%s/%s", cur_name, entry -> d_name);
-        if (stat(path, & file_stat) == -1) {
+        snprintf(path, PATH_MAX, "%s/%s", cur_name, entry->d_name);
+        if (stat(path, &file_stat) == -1) {
             closedir(dir);
             perror("stat");
             return;
         }
 
 
-        if (entry -> d_type == 4 && strcmp(entry -> d_name, "..") != 0 && strcmp(entry -> d_name, ".") != 0) {
+        if (entry->d_type == 4 && strcmp(entry->d_name, "..") != 0 && strcmp(entry->d_name, ".") != 0) {
             printf("check %s: type=%u, ino=%lu\n", entry->d_name, entry->d_type, file_stat.st_ino);
             if (file_stat.st_ino == inode) {
                 strcpy(res, path);
@@ -70,38 +70,40 @@ void find_dir(ino_t inode, const char * cur_name, char* res) {
     }
     closedir(dir);
 }
+
 /*
 actually gets dir content by name
 */
-struct entries list_directory_info(const char * cur_name) {
+struct entries list_directory_info(const char *cur_name) {
 
     struct entries result;
     result.entries_count = 0;
 
 
-    DIR * dir = opendir(cur_name);
+    DIR *dir = opendir(cur_name);
     if (dir == NULL) {
         perror("opendir");
         return result;
     }
 
 
-    struct dirent * entry;
+    struct dirent *entry;
     while ((entry = readdir(dir)) != NULL) {
 
         struct stat file_stat;
         char path[PATH_MAX];
-        snprintf(path, PATH_MAX, "%s/%s", cur_name, entry -> d_name);
-        if (stat(path, & file_stat) == -1) {
+        snprintf(path, PATH_MAX, "%s/%s", cur_name, entry->d_name);
+        if (stat(path, &file_stat) == -1) {
             perror("stat");
             continue;
         }
 
 
-        if (result.entries_count < MAX_ENTRIES && strcmp(entry -> d_name, "..") != 0 && strcmp(entry -> d_name, ".") != 0) {
-            result.entries[result.entries_count].entry_type = entry -> d_type;
+        if (result.entries_count < MAX_ENTRIES && strcmp(entry->d_name, "..") != 0 && strcmp(entry->d_name, ".") != 0) {
+            result.entries[result.entries_count].entry_type = entry->d_type;
             result.entries[result.entries_count].ino = file_stat.st_ino;
-            strncpy(result.entries[result.entries_count].name, entry -> d_name, sizeof(result.entries[result.entries_count].name) - 1);
+            strncpy(result.entries[result.entries_count].name, entry->d_name,
+                    sizeof(result.entries[result.entries_count].name) - 1);
             result.entries_count++;
         }
     }
@@ -113,7 +115,7 @@ struct entries list_directory_info(const char * cur_name) {
 }
 
 
-void send(int new_socket, const char* sendbuf){
+void send(int new_socket, const char *sendbuf) {
     printf("sendbuf %s\n", sendbuf);
     ssize_t sent_bytes = send(new_socket, sendbuf, strlen(sendbuf), 0);
     if (sent_bytes == -1) {
@@ -123,9 +125,9 @@ void send(int new_socket, const char* sendbuf){
 }
 
 
-char* create_entries_json(struct entries my_res){
-    char *sendbuf = (char*)malloc(1024);
-    sprintf(sendbuf, "response:{code:0,entries:{\nentries_count:%ld,\nentries_arr:[\n",  my_res.entries_count);
+char *create_entries_json(struct entries my_res) {
+    char *sendbuf = (char *) malloc(1024);
+    sprintf(sendbuf, "response:{code:0,entries:{\nentries_count:%ld,\nentries_arr:[\n", my_res.entries_count);
     for (int i = 0; i < my_res.entries_count; i++) {
         char temp[512];
         struct entry en = my_res.entries[i];
@@ -137,8 +139,8 @@ char* create_entries_json(struct entries my_res){
     return sendbuf;
 }
 
-char *create_entry_info_json(struct entry_info info){ //check working ok TODO
-    char *sendbuf = (char*)malloc(1024);
+char *create_entry_info_json(struct entry_info info) { //check working ok TODO
+    char *sendbuf = (char *) malloc(1024);
     sprintf(sendbuf, "response:{code:0,entry_info:{");
     char type_temp[256], inode_temp[256];
 
@@ -152,26 +154,26 @@ char *create_entry_info_json(struct entry_info info){ //check working ok TODO
 }
 
 
-void list_request(int new_socket, ino_t inode){
+void list_request(int new_socket, ino_t inode) {
     printf("going to get dir info %ld\n", inode);
-    const char* start_dir = ".";
+    const char *start_dir = ".";
     char dir_name[PATH_MAX] = {'\0'};
     find_dir(inode, start_dir, dir_name);
-    if(strlen(dir_name) == 0){
+    if (strlen(dir_name) == 0) {
         send(new_socket, err_resp);
         return;
     }
     struct entries my_res = list_directory_info(dir_name);
-    char* entries_json = create_entries_json(my_res);
+    char *entries_json = create_entries_json(my_res);
     send(new_socket, entries_json);
 }
 
 
-void lookup_request(int new_socket, ino_t parent_inode, char * name){
-    const char* start_dir = ".";
+void lookup_request(int new_socket, ino_t parent_inode, char *name) {
+    const char *start_dir = ".";
     char parent_name[PATH_MAX] = {'\0'};
     find_dir(parent_inode, start_dir, parent_name);
-    if(strlen(parent_name) == 0){
+    if (strlen(parent_name) == 0) {
         printf("not found parent dir\n");
         send(new_socket, err_resp);
         return;
@@ -179,19 +181,19 @@ void lookup_request(int new_socket, ino_t parent_inode, char * name){
 
     printf("going to search file in dir %s\n", parent_name);
 
-    DIR * dir = opendir(parent_name);
+    DIR *dir = opendir(parent_name);
     struct dirent *entry;
     struct entry_info info;
 
     if (dir == NULL) {
         perror("opendir");
-        send(new_socket,err_resp);
+        send(new_socket, err_resp);
         return;
     }
 
     int file_found = 0;
     while ((entry = readdir(dir)) != NULL) {
-        if(strcmp(name, entry->d_name) == 0){
+        if (strcmp(name, entry->d_name) == 0) {
             info.entry_type = entry->d_type;
             info.ino = entry->d_ino;
             printf("found %s: type=%u, ino=%lu\n", entry->d_name, info.entry_type, info.ino);
@@ -199,7 +201,7 @@ void lookup_request(int new_socket, ino_t parent_inode, char * name){
             break;
         }
     }
-    if(!file_found){
+    if (!file_found) {
         send(new_socket, err_resp);
         return;
     }
@@ -208,13 +210,13 @@ void lookup_request(int new_socket, ino_t parent_inode, char * name){
 
 }
 
-void create_request(int new_socket, ino_t parent_inode, char * name, int type){
+void create_request(int new_socket, ino_t parent_inode, char *name, int type) {
     printk("create...\n");
     ino_t new_inode;
-    const char* start_dir = ".";
+    const char *start_dir = ".";
     char parent_name[PATH_MAX] = {'\0'};
     find_dir(parent_inode, start_dir, parent_name);
-    if(strlen(parent_name) == 0){
+    if (strlen(parent_name) == 0) {
         printf("not found parent dir\n");
         send(new_socket, err_resp);
         return;
@@ -264,11 +266,11 @@ void create_request(int new_socket, ino_t parent_inode, char * name, int type){
 
 }
 
-void parse_request(const char * request, int new_socket) {
+void parse_request(const char *request, int new_socket) {
     char *str;
     char *token;
-    const char* sep = "{},:[] \n";
-    str = (char*) malloc(strlen(request) + 1); //TODO check ok malloc
+    const char *sep = "{},:[] \n";
+    str = (char *) malloc(strlen(request) + 1); //TODO check ok malloc
     strcpy(str, request);
     token = strsep(&str, sep);
 
@@ -276,7 +278,7 @@ void parse_request(const char * request, int new_socket) {
 
     while (token != NULL) {
         printf("%s\n", token);
-        if(strcmp(token, "method") == 0){
+        if (strcmp(token, "method") == 0) {
             token = strsep(&str, sep);
             printf("%s\n", token);
 
@@ -284,7 +286,7 @@ void parse_request(const char * request, int new_socket) {
                 request:{method:"list",inode:12345}
                 */
 
-            if(strcmp(token, "\"list\"") == 0){
+            if (strcmp(token, "\"list\"") == 0) {
                 token = strsep(&str, sep); //token = "inode"
                 token = strsep(&str, sep); //token = inode_val
                 printf("%s\n", token);
@@ -302,7 +304,7 @@ void parse_request(const char * request, int new_socket) {
                 */
 
             else if (strcmp(token, "\"lookup\"") == 0 ||
-                     strcmp(token, "\"create\"") == 0){
+                     strcmp(token, "\"create\"") == 0) {
                 char op_name[MAX_OP_LEN];
                 strcpy(op_name, token);
 
@@ -315,16 +317,15 @@ void parse_request(const char * request, int new_socket) {
                 token = strsep(&str, sep); //token = "name"
                 token = strsep(&str, sep); //token = name str
 
-                char* file_name = (char*)malloc(sizeof(token) + 1);
+                char *file_name = (char *) malloc(sizeof(token) + 1);
                 strncpy(file_name, token + 1, strlen(token) - 1);
                 file_name[strlen(file_name) - 1] = '\0';
                 printf("file name is %s\n", file_name);
 
-                if(strcmp(op_name, "\"lookup\"") == 0){
+                if (strcmp(op_name, "\"lookup\"") == 0) {
                     lookup_request(new_socket, parent_ino, file_name);
                     free(file_name);
-                }
-                else{
+                } else {
                     token = strsep(&str, sep); //token = "type"
                     token = strsep(&str, sep); //token = type val
                     int type = strtoul(token, NULL, 10);
@@ -342,7 +343,7 @@ void parse_request(const char * request, int new_socket) {
 }
 
 
-void start(){
+void start() {
     int server_fd, new_socket, valread;
     struct sockaddr_in address;
     int opt = 1;
@@ -366,7 +367,7 @@ void start(){
     address.sin_port = htons(PORT);
 
     // Forcefully attaching socket to the port 8080
-    if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
+    if (bind(server_fd, (struct sockaddr *) &address, sizeof(address)) < 0) {
         perror("bind failed");
         exit(EXIT_FAILURE);
     }
@@ -377,7 +378,7 @@ void start(){
     }
 
     while (true) {
-        if ((new_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&addrlen)) < 0) {
+        if ((new_socket = accept(server_fd, (struct sockaddr *) &address, (socklen_t * ) & addrlen)) < 0) {
             perror("accept");
             exit(EXIT_FAILURE);
         }
