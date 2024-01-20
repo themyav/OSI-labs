@@ -125,7 +125,7 @@ void send(int new_socket, const char *sendbuf) {
 }
 
 
-char *create_entries_json(struct entries my_res) {
+void create_entries_json(struct entries my_res, char * result) {
     char *sendbuf = (char *) malloc(1024);
     sprintf(sendbuf, "response:{code:0,entries:{\nentries_count:%ld,\nentries_arr:[\n", my_res.entries_count);
     for (int i = 0; i < my_res.entries_count; i++) {
@@ -136,11 +136,12 @@ char *create_entries_json(struct entries my_res) {
     }
     strcat(sendbuf, "]\n}\n}\n");
     printf("data %s\n size %ld\n", sendbuf, strlen(sendbuf));
-    return sendbuf;
+    strcpy(result, sendbuf);
+    free(sendbuf);
 }
 
-char *create_entry_info_json(struct entry_info info) { //check working ok TODO
-    char *sendbuf = (char *) malloc(1024);
+void create_entry_info_json(struct entry_info info, char* result) { //check working ok TODO
+    char *sendbuf = (char *) malloc(512);
     sprintf(sendbuf, "response:{code:0,entry_info:{");
     char type_temp[256], inode_temp[256];
 
@@ -150,7 +151,8 @@ char *create_entry_info_json(struct entry_info info) { //check working ok TODO
     strcat(sendbuf, inode_temp);
     strcat(sendbuf, "}}");
     printf("json data: %s\n", sendbuf);
-    return sendbuf;
+    strcpy(result, sendbuf);
+    free(sendbuf);
 }
 
 
@@ -164,7 +166,8 @@ void list_request(int new_socket, ino_t inode) {
         return;
     }
     struct entries my_res = list_directory_info(dir_name);
-    char *entries_json = create_entries_json(my_res);
+    char entries_json[1024];
+    create_entries_json(my_res, entries_json);
     send(new_socket, entries_json);
 }
 
@@ -205,13 +208,13 @@ void lookup_request(int new_socket, ino_t parent_inode, char *name) {
         send(new_socket, err_resp);
         return;
     }
-
-    send(new_socket, create_entry_info_json(info));
-
+    char info_json[512];
+    create_entry_info_json(info, info_json);
+    send(new_socket, info_json);
 }
 
 void create_request(int new_socket, ino_t parent_inode, char *name, int type) {
-    printk("create...\n");
+    printf("create...\n");
     ino_t new_inode;
     const char *start_dir = ".";
     char parent_name[PATH_MAX] = {'\0'};
