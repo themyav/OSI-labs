@@ -12,14 +12,14 @@
 #define MAX_NAME_LENGTH 256
 
 struct entry {
-  unsigned char entry_type;
-  ino_t ino;
-  char name[MAX_NAME_LENGTH];
+    unsigned char entry_type;
+    ino_t ino;
+    char name[MAX_NAME_LENGTH];
 };
 
 struct entries {
-  size_t entries_count;
-  struct entry entries[MAX_ENTRIES];
+    size_t entries_count;
+    struct entry entries[MAX_ENTRIES];
 };
 
 struct entry_info {
@@ -29,5 +29,6 @@ struct entry_info {
 
 int list_call(ino_t inode, struct entries* result);
 int lookup_call(ino_t parent_inode, char* name, struct entry_info* result);
+int create_call(ino_t parent_inode, char* name, int type, ino_t* result);
 
 #endif

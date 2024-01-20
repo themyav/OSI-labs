@@ -14,5 +14,8 @@ struct inode *networkfs_get_inode(struct super_block *, const struct inode *,
 void networkfs_kill_sb(struct super_block *);
 struct dentry *networkfs_lookup(struct inode *, struct dentry *, unsigned int);
 int networkfs_iterate(struct file *, struct dir_context *);
+int networkfs_create(struct user_namespace *, struct inode *, struct dentry *,
+                     umode_t, bool);
+int networkfs_unlink(struct inode *, struct dentry *);
 
 #endif
