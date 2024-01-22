@@ -7,7 +7,7 @@
 #include "tcp_client.h"
 #include "entrypoint.h"
 
-#define ROOT_INODE 2756147
+#define ROOT_INODE 2756390
 
 
 MODULE_LICENSE("GPL");
@@ -31,67 +31,7 @@ struct file_operations networkfs_dir_ops =
 struct inode_operations networkfs_inode_ops =
         {
                 .lookup = networkfs_lookup,
-                .create = networkfs_create,
-                .unlink = networkfs_unlink,
-                .mkdir = networkfs_mkdir,
-                .rmdir = networkfs_rmdir
         };
-
-int networkfs_rmdir(struct inode *parent_inode, struct dentry *child_dentry) {
-    int res = rmdir_call(parent_inode->i_ino, child_dentry->d_name.name);
-
-    return res;
-}
-
-int networkfs_mkdir(struct user_namespace *ns, struct inode *parent_inode,
-                    struct dentry *child_dentry, umode_t t) {
-    ino_t new_inode;
-    struct inode * inode;
-    int res = create_call(parent_inode->i_ino, child_dentry->d_name.name, 4, &new_inode);
-
-    if (res) {
-        return res;
-    }
-
-    inode = networkfs_get_inode(parent_inode->i_sb, NULL, S_IFDIR, new_inode);
-
-    d_add(child_dentry, inode);
-    return 0;
-}
-
-
-int networkfs_unlink(struct inode *parent_inode, struct dentry *child_dentry) {
-    const char *name;
-    ino_t root;
-    name = child_dentry->d_name.name;
-    root = parent_inode->i_ino;
-
-    int64_t res = unlink_call(root, name);
-
-    return res;
-}
-
-
-int networkfs_create(struct user_namespace *ns, struct inode *parent_inode,
-                     struct dentry *child_dentry, umode_t mode, bool b) {
-    ino_t new_inode;
-    ino_t root;
-    struct inode *inode;
-    const char *name;
-
-    name = child_dentry->d_name.name;
-    root = parent_inode->i_ino;
-
-    int64_t res = create_call(root, name, 8, &new_inode); //create FILE
-
-    if (res) {
-        return res;
-    }
-
-    inode = networkfs_get_inode(parent_inode->i_sb, NULL, S_IFREG, new_inode);
-    d_add(child_dentry, inode);
-    return 0;
-}
 
 
 struct inode *networkfs_get_inode(struct super_block *sb,
@@ -244,6 +184,7 @@ int networkfs_init(void) {
     register_filesystem(&networkfs_fs_type);
     printk(KERN_INFO
     "Hello, World!\n");
+
     return 0;
 }
 

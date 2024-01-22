@@ -2,7 +2,7 @@
 #include <linux/slab.h>
 #include <linux/string.h>
 
-struct socket *sock;
+struct socket *sock = NULL;
 const char *sep = "{},:[] \n";
 
 int parse_code(const char *input_str) {
@@ -243,6 +243,7 @@ int make_request(char *request, char *response) {
     //connect to server
     ret = init_serv_connection();
     if (ret != 0) {
+
         printk("can not connect to server\n");
         return ret;
     }
@@ -273,11 +274,17 @@ int list_call(ino_t inode, struct entries *result) { //TODO (remove dublication 
     //create request
     sprintf(request, "request:{method:\"list\",inode:%ld}", inode);
     ret = make_request(request, response);
-    if (ret != 0) return ret;
+    if (ret != 0) {
+        if(sock != NULL) sock_release(sock);
+        return ret;
+    }
 
     code = parse_entries(response, &res_entries);
     printk("request returned %d code\n", code);
-    if (code != 0) return code;
+    if (code != 0){
+        if(sock != NULL) sock_release(sock);
+        return code;
+    }
 
     result->entries_count = res_entries.entries_count;
 
@@ -305,10 +312,16 @@ int lookup_call(ino_t parent_inode, char *name, struct entry_info *result) {
     //create request
     sprintf(request, "request:{method:\"lookup\",parent_inode:%ld,name:\"%s\"}", parent_inode, name);
     ret = make_request(request, response);
-    if (ret != 0) return ret;
+    if (ret != 0) {
+        if(sock != NULL) sock_release(sock);
+        return ret;
+    }
 
     code = parse_entry_info(response, &info);
-    if (code != 0) return code;
+    if (code != 0) {
+        if(sock != NULL) sock_release(sock);
+        return code;
+    }
     printk("type: %d, inode: %ld\n", info.entry_type, info.ino);
     result->entry_type = info.entry_type;
     result->ino = info.ino;
@@ -326,9 +339,15 @@ int create_call(ino_t parent_inode, char *name, int type, ino_t *result) {
     //create request
     sprintf(request, "request:{method:\"create\",parent_inode:%ld,name:\"%s\",type:%d}", parent_inode, name, type);
     ret = make_request(request, response);
-    if (ret != 0) return ret;
+    if (ret != 0) {
+        if(sock != NULL) sock_release(sock);
+        return ret;
+    }
     code = parse_create_response(response, &new_inode);
-    if (code != 0) return code;
+    if (code != 0) {
+        if(sock != NULL) sock_release(sock);
+        return code;
+    }
     *result = new_inode;
     printk("new inode is %ld\n", *result);
     sock_release(sock);
@@ -342,9 +361,15 @@ int unlink_call(ino_t parent_inode, char *name){
     //create request
     sprintf(request, "request:{method:\"unlink\",parent_inode:%ld,name:\"%s\"}", parent_inode, name);
     ret = make_request(request, response);
-    if (ret != 0) return ret;
+    if (ret != 0) {
+        if(sock != NULL) sock_release(sock);
+        return ret;
+    }
     code = parse_code(response);
-    if (code != 0) return code;
+    if (code != 0) {
+        if(sock != NULL) sock_release(sock);
+        return code;
+    }
     sock_release(sock);
     return 0;
 }
@@ -356,9 +381,15 @@ int rmdir_call(ino_t parent_inode, char *name){
     //create request
     sprintf(request, "request:{method:\"rmdir\",parent_inode:%ld,name:\"%s\"}", parent_inode, name);
     ret = make_request(request, response);
-    if (ret != 0) return ret;
+    if (ret != 0) {
+        if(sock != NULL) sock_release(sock);
+        return ret;
+    }
     code = parse_code(response);
-    if (code != 0) return code;
+    if (code != 0) {
+        if(sock != NULL) sock_release(sock);
+        return code;
+    }
     sock_release(sock);
     return 0;
 }

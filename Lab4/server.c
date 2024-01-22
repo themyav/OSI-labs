@@ -317,10 +317,10 @@ void parse_request(const char *request, int new_socket) {
     //TODO optional: check key name request, ino so on
 
     while (token != NULL) {
-        printf("%s\n", token);
+        printf("first token is %s\n", token);
         if (strcmp(token, "method") == 0) {
             token = strsep(&str, sep);
-            printf("%s\n", token);
+            printf("method name: %s\n", token);
 
             /*
                 request:{method:"list",inode:12345}
@@ -329,10 +329,11 @@ void parse_request(const char *request, int new_socket) {
             if (strcmp(token, "\"list\"") == 0) {
                 token = strsep(&str, sep); //token = "inode"
                 token = strsep(&str, sep); //token = inode_val
-                printf("%s\n", token);
+                printf("inode val %s\n", token);
                 ino_t inode = strtoul(token, NULL, 10);
                 printf("inode is %ld\n", inode);
                 list_request(new_socket, inode);
+                return;
             }
 
                 /*
@@ -374,14 +375,17 @@ void parse_request(const char *request, int new_socket) {
 
                 if (strcmp(op_name, "\"lookup\"") == 0) {
                     lookup_request(new_socket, parent_ino, file_name);
+                    return;
                     free(file_name);
                 }
                 else if (strcmp(op_name, "\"unlink\"") == 0){
                     unlink_request(new_socket, parent_ino, file_name);
+                    return;
                     free(file_name);
                 }
                 else if (strcmp(op_name, "\"rmdir\"") == 0){
                     rmdir_request(new_socket, parent_ino, file_name);
+                    return;
                     free(file_name);
                 }
                 else {
@@ -389,6 +393,7 @@ void parse_request(const char *request, int new_socket) {
                     token = strsep(&str, sep); //token = type val
                     int type = strtoul(token, NULL, 10);
                     create_request(new_socket, parent_ino, file_name, type);
+                    return;
                     free(file_name);
                 }
 
@@ -398,6 +403,8 @@ void parse_request(const char *request, int new_socket) {
         }
         token = strsep(&str, sep);
     }
+    printf("not parsed and found\n");
+    send(new_socket, err_resp);
     free(str);
 }
 
