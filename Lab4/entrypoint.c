@@ -130,6 +130,7 @@ int networkfs_iterate(struct file *filp, struct dir_context *ctx) {
 
     printk("request for %ld\n", ino);
     int64_t res = list_call(ino, &entries);
+    if(res != 0) return -1;
     int i;
     i = 0;
     /*int cnt = entries.entries_count;
