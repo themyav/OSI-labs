@@ -10,6 +10,7 @@ int parse_code(const char *input_str) {
     char *str;
     int code;
     str = kmalloc(strlen(input_str) + 1, GFP_KERNEL);
+    if(str == NULL) return 1;
     strcpy(str, input_str);
     token = strsep(&str, sep);
     while (token != NULL) {
@@ -38,6 +39,7 @@ int parse_create_response(const char *input_str, ino_t *result) {
 
 
     str = kmalloc(strlen(input_str) + 1, GFP_KERNEL);
+    if(str == NULL) return 1;
     strcpy(str, input_str);
     token = strsep(&str, sep);
     while (token != NULL) {
@@ -62,6 +64,7 @@ int parse_entry_info(const char *input_str, struct entry_info *result) {
     if (code != 0) return code;
 
     str = kmalloc(strlen(input_str) + 1, GFP_KERNEL);
+    if(str == NULL) return 1;
     strcpy(str, input_str);
     token = strsep(&str, "{},:[] \n");
     while (token != NULL) {
@@ -93,6 +96,7 @@ int parse_entries(const char *input_str, struct entries *result) {
     if (code != 0) return code;
 
     str = kmalloc(strlen(input_str) + 1, GFP_KERNEL);
+    if(str == NULL) return 1;
     strcpy(str, input_str);
 
 
