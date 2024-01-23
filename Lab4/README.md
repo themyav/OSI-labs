@@ -1,8 +1,14 @@
-## Lab 4: инструкция по запуску
+## Lab 4: инструкция по установке и запуску
+
+```git clone https://github.com/themyav/OSI-labs```
+
+```cd OSI-labs/Lab4```
 
 ### Сервер:
 
 ```g++ -o server server.c```
+
+```./server```
 
 ### Модуль
 
