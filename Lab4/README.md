@@ -12,6 +12,8 @@
 
 ### Модуль
 
+Меняем в файле  ``entrypoint.c`` значение ``ROOT_INODE`` на inode папки server_root.
+
 ```chmod u+x ./start```
 
 ```chmod u+x ./exit```
